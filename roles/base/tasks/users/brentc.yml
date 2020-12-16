@@ -1,0 +1,216 @@
+- name: users | brentc | create group
+  tags: groups,brentc,users
+  group:
+    name: brentc
+    state: present
+
+- name: users | brentc | create user
+  tags: brentc,sudo,users
+  user:
+    name: brentc
+    group: brentc
+    groups: adm,ansible,{{ sudo_group }}
+    state: present
+    comment: "Brentx"
+    password: "{{ brentc_passwd }}"
+    shell: /bin/bash
+
+- name: users | brentc | brentc | add sudoers file
+  tags: brentc,settings,simone,sudo,system,users
+  copy:
+    src: users/sudoers_brentc
+    dest: /etc/sudoers.d/brentc
+    owner: root
+    group: root
+    mode: 0440
+
+- name: users | brentc | create .ssh directory
+  tags: dotfiles,brentc,ssh,users
+  file:
+    path: "{{ item.dir }}"
+    state: directory
+    owner: brentc
+    group: brentc
+    mode: 0700
+  with_items:
+    - { dir: '/home/brentc/.ssh' }
+
+- name: users | brentc | add public key
+  tags: dotfiles,brentc,ssh,ssh-keys,users
+  authorized_key:
+    user: brentc
+    key: "{{ item }}"
+  with_file:
+    - users/brentc/ssh/identity.pub
+
+- name: users | brentc | create config directories
+  tags: dotfiles,brentc,tmux,users,vim,zsh
+  file:
+    path: /home/brentc/{{ item.dir }}
+    state: directory
+    owner: brentc
+    group: brentc
+    mode: 0700
+  with_items:
+    - { dir: '.bash' }
+    - { dir: '.config' }
+    - { dir: '.config/htop' }
+    - { dir: '.config/mc' }
+    - { dir: '.tmux' }
+    - { dir: '.tmux/config' }
+    - { dir: '.tmux/plugins' }
+    - { dir: '.vim' }
+    - { dir: '.vim/autoload' }
+    - { dir: '.vim/bundle' }
+    - { dir: '.vim/colors' }
+    - { dir: '.vim/ftplugin' }
+    - { dir: '.zsh' }
+
+- name: users | brentc | copy tmux config (server version)
+  tags: dotfiles,users,brentc,tmux,users,vim,zsh
+  copy:
+    src: users/brentc/tmux/tmux.conf.server
+    dest: /home/brentc/.tmux.conf
+    owner: brentc
+    group: brentc
+    mode: 0600
+  when: "'server' not in group_names"
+
+- name: users | brentc | copy tmux config (workstation version)
+  tags: dotfiles,users,brentc,tmux,users,vim,zsh
+  copy:
+    src: users/brentc/tmux/tmux.conf.workstation
+    dest: /home/brentc/.tmux.conf
+    owner: brentc
+    group: brentc
+    mode: 0600
+  when: "'server' in group_names"
+
+- name: users | brentc | copy dotfiles
+  tags: dotfiles,users,brentc,tmux,users,vim,zsh
+  copy:
+    src: users/brentc/{{ item.src }}
+    dest: /home/brentc/{{ item.dest }}
+    owner: brentc
+    group: brentc
+    mode: 0600
+  with_items:
+    - { src: 'bash/bash_aliases', dest: '.bash/bash_aliases' }
+    - { src: 'bash/bash_profile', dest: '.bash_profile' }
+    - { src: 'bash/bash_prompt', dest: '.bash/bash_prompt' }
+    - { src: 'bash/bash_functions', dest: '.bash/bash_functions' }
+    - { src: 'bash/bashrc', dest: '.bashrc' }
+    - { src: 'bash/profile', dest: '.profile' }
+    - { src: 'git/gitconfig', dest: '.gitconfig' }
+    - { src: 'htop/htoprc', dest: '.config/htop/htoprc' }
+    - { src: 'inputrc', dest: '.inputrc' }
+    - { src: 'mc/mc.ini', dest: '.config/mc/ini' }
+    - { src: 'vim/vimrc', dest: '.vimrc' }
+    - { src: 'zsh/zshrc', dest: '.zshrc' }
+
+- name: users | brentc | clone tmux-completion plugin repository
+  tags: dotfiles,brentc,users,tmux
+  git:
+    repo: https://github.com/srsudar/tmux-completion.git
+    dest: /home/brentc/.tmux/plugins/completion
+    force: yes
+  notify: update_tmux_plugin_perms
+
+- name: users | brentc | clone tmux-continuum plugin repository
+  tags: dotfiles,brentc,users,tmux
+  git:
+    repo: https://github.com/tmux-plugins/tmux-continuum
+    dest: /home/brentc/.tmux/plugins/continuum
+    force: yes
+  notify: update_tmux_plugin_perms
+
+- name: users | brentc | clone tmux-resurrect plugin repository
+  tags: dotfiles,brentc,users,tmux
+  git:
+    repo: https://github.com/tmux-plugins/tmux-resurrect
+    dest: /home/brentc/.tmux/plugins/resurrect
+    force: yes
+  notify: update_tmux_plugin_perms
+
+- name: users | brentc | copy individual zsh config files
+  tags: dotfiles,brentc,users,zsh
+  copy:
+    src: users/brentc/zsh/{{ item.src }}
+    dest: /home/brentc/.zsh/{{ item.src }}
+    owner: brentc
+    group: brentc
+    mode: 0600
+  with_items:
+    - { src: 'aliases.zsh' }
+    - { src: 'bindkey.zsh' }
+    - { src: 'completion.zsh' }
+    - { src: 'exports.zsh' }
+    - { src: 'functions.zsh' }
+    - { src: 'history.zsh' }
+    - { src: 'path.zsh' }
+    - { src: 'plugins.zsh' }
+    - { src: 'prompt.zsh' }
+    - { src: 'setopt.zsh' }
+    - { src: 'theming.zsh' }
+
+- name: users | brentc | copy vim ftype files
+  tags: dotfiles,brentc,users,vim
+  copy:
+    src: users/brentc/vim/{{ item.src }}
+    dest: /home/brentc/.vim/ftplugin/{{ item.src }}
+    owner: brentc
+    group: brentc
+    mode: 0600
+  with_items:
+    - { src: 'cmake.vim' }
+    - { src: 'cpp.vim' }
+    - { src: 'html.vim' }
+    - { src: 'perl.vim' }
+    - { src: 'python.vim' }
+    - { src: 'ruby.vim' }
+    - { src: 'sql.vim' }
+    - { src: 'xml.vim' }
+
+- name: users | brentc | copy vim color files
+  tags: dotfiles,brentc,users,vim
+  copy:
+    src: users/brentc/vim/{{ item.src }}
+    dest: /home/brentc/.vim/colors/{{ item.src }}
+    owner: brentc
+    group: brentc
+    mode: 0600
+  with_items:
+    - { src: 'bubblegum-256-dark.vim' }
+    - { src: 'darktango.vim' }
+    - { src: 'jellybeans.vim' }
+    - { src: 'xoria256.vim' }
+    - { src: 'zenburn.vim' }
+
+- name: users | brentc | install pathogen
+  tags: dotfiles,brentc,users,vim
+  copy:
+    src: users/brentc/vim/{{ item.src }}
+    dest: "{{ item.dest }}"
+    owner: brentc
+    group: brentc
+    mode: 0700
+  with_items:
+    - { src: 'pathogen.vim', dest: '/home/brentc/.vim/autoload/pathogen.vim' }
+
+- name: users | brentc | checkout git repositories
+  tags: git,users,brentc
+  become: yes
+  git:
+    repo: "{{ item.repo }}"
+    dest: "{{ item.dest }}"
+    force: yes
+  with_items:
+    - { repo: 'https://github.com/ctrlpvim/ctrlp.vim.git', dest: '/home/brentc/.vim/bundle/ctrlp.vim' }
+    - { repo: 'https://github.com/davidhalter/jedi-vim.git', dest: '/home/brentc/.vim/bundle/jedi-vim' }
+    - { repo: 'https://github.com/pearofducks/ansible-vim', dest: '/home/brentc/.vim/bundle/ansible-vim' }
+    - { repo: 'https://github.com/rhysd/vim-grammarous.git', dest: '/home/brentc/.vim/bundle/vim-grammarous' }
+    - { repo: 'https://github.com/ron89/thesaurus_query.vim', dest: '/home/brentc/.vim/bundle/thesaurus_query' }
+    - { repo: 'https://github.com/scrooloose/nerdtree.git', dest: '/home/brentc/.vim/bundle/nerdtree' }
+    - { repo: 'https://github.com/tpope/vim-obsession.git', dest: '/home/brentc/.vim/bundle/vim-obsession' }
+    - { repo: 'https://github.com/vim-syntastic/syntastic.git', dest: '/home/brentc/.vim/bundle/syntastic' }
+  notify: update_vim_bundle_perms
