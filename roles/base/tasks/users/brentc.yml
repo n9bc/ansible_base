@@ -16,7 +16,7 @@
     shell: /bin/bash
 
 - name: users | brentc | brentc | add sudoers file
-  tags: brentc,settings,simone,sudo,system,users
+  tags: brentc,settings,ansible,sudo,system,users
   copy:
     src: users/sudoers_brentc
     dest: /etc/sudoers.d/brentc
@@ -65,26 +65,6 @@
     - { dir: '.vim/colors' }
     - { dir: '.vim/ftplugin' }
     - { dir: '.zsh' }
-
-- name: users | brentc | copy tmux config (server version)
-  tags: dotfiles,users,brentc,tmux,users,vim,zsh
-  copy:
-    src: users/brentc/tmux/tmux.conf.server
-    dest: /home/brentc/.tmux.conf
-    owner: brentc
-    group: brentc
-    mode: 0600
-  when: "'server' not in group_names"
-
-- name: users | brentc | copy tmux config (workstation version)
-  tags: dotfiles,users,brentc,tmux,users,vim,zsh
-  copy:
-    src: users/brentc/tmux/tmux.conf.workstation
-    dest: /home/brentc/.tmux.conf
-    owner: brentc
-    group: brentc
-    mode: 0600
-  when: "'server' in group_names"
 
 - name: users | brentc | copy dotfiles
   tags: dotfiles,users,brentc,tmux,users,vim,zsh
